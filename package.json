@@ -1,0 +1,16 @@
+{
+  "name": "mvc-notas-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Laboratorio de Arquitectura de Software: del código espagueti al patrón MVC",
+  "scripts": {
+    "start": "node servidor.mjs",
+    "test": "node pruebas/ejecutar.mjs",
+    "test:modelo": "node pruebas/ejecutar.mjs modelo",
+    "arquitectura": "node pruebas/ejecutar.mjs arquitectura"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

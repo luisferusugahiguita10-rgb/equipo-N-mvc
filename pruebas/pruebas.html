@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pruebas · Notas del semestre</title>
+<style>
+  :root { --papel: #f3f1ea; --hoja: #fff; --tinta: #21241f; --suave: #5c6158; --linea: #dbd7c9; --ok: #2f6b3a; --mal: #a8362a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--papel); color: var(--tinta); }
+  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  .sub { margin: 0 0 16px; color: var(--suave); }
+  #total { padding: 10px 14px; border-radius: 8px; font-weight: 700; background: #fff; border: 1px solid var(--linea); }
+  #total.ok { color: var(--ok); } #total.mal { color: var(--mal); }
+  details { margin-top: 12px; background: var(--hoja); border: 1px solid var(--linea); border-radius: 10px; padding: 10px 14px; }
+  summary { cursor: pointer; font-weight: 600; }
+  ul { list-style: none; margin: 8px 0 0; padding: 0; }
+  li { padding: 4px 0; }
+  li.ok::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+  li.mal::before { content: "✗ "; color: var(--mal); font-weight: 700; }
+  pre { margin: 4px 0 0 20px; padding: 8px 10px; background: var(--papel); border-radius: 6px; white-space: pre-wrap; color: var(--mal); font-size: 13px; }
+  .cuenta { color: var(--suave); font-weight: 400; margin-left: 6px; }
+  .cuenta.ok { color: var(--ok); } .cuenta.mal { color: var(--mal); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pruebas</h1>
+  <p class="sub">Las mismas pruebas que <code>npm test</code>, pero en el navegador. Recarga la página después de cada cambio.
+     Filtra con <code>?suite=modelo</code> o <code>?suite=arquitectura</code>.</p>
+  <div id="total">Ejecutando…</div>
+  <div id="grupos"></div>
+</main>
+
+<script type="module">
+  import { ejecutar } from './mini.js';
+
+  const suite = new URLSearchParams(location.search).get('suite');
+  if (!suite || suite === 'modelo') await import('./modelo.pruebas.js');
+  if (!suite || suite === 'arquitectura') await import('./arquitectura.pruebas.js');
+
+  const resultado = await ejecutar();
+  const total = document.getElementById('total');
+  total.textContent = `${resultado.pasan} de ${resultado.total} pruebas pasan`;
+  total.className = resultado.fallan === 0 ? 'ok' : 'mal';
+
+  const contenedor = document.getElementById('grupos');
+  for (const g of resultado.grupos) {
+    const completo = g.pasan === g.resultados.length;
+    const detalle = document.createElement('details');
+    detalle.open = !completo && g === resultado.grupos.find((x) => x.pasan < x.resultados.length && !x.extension) ;
+    const titulo = document.createElement('summary');
+    const cuenta = document.createElement('span');
+    cuenta.className = `cuenta ${completo ? 'ok' : 'mal'}`;
+    cuenta.textContent = `${g.pasan}/${g.resultados.length}`;
+    titulo.append(`${g.suite} · ${g.nombre}`, cuenta);
+    const lista = document.createElement('ul');
+    for (const r of g.resultados) {
+      const li = document.createElement('li');
+      li.className = r.ok ? 'ok' : 'mal';
+      li.append(r.nombre);
+      if (!r.ok) {
+        const pre = document.createElement('pre');
+        pre.textContent = r.mensaje;
+        li.append(pre);
+      }
+      lista.append(li);
+    }
+    detalle.append(titulo, lista);
+    contenedor.append(detalle);
+  }
+</script>
+</body>
+</html>
