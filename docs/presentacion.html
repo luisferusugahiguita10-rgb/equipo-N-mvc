@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>El patrón MVC — Presentación</title>
+<meta name="description" content="Presentación del tema Patrón MVC de Arquitectura de Software: del código espagueti a Modelo, Vista y Controlador, con el flujo, la regla de dependencias, Observer, olores, variantes y el puente al laboratorio. 20 diapositivas.">
+<meta name="theme-color" content="#1d201c">
+<meta property="og:title" content="El patrón MVC — Presentación">
+<meta property="og:description" content="Arquitectura de Software · Patrón MVC · 20 diapositivas">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400..700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --k: 1; --cols: 1; --accent: #3d8fc9; --accent-on-dark: #6fb1e0; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0f110e; color: #f2efe6; font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace; }
+  body { overflow: hidden; }
+  body.grid { overflow: auto; height: auto; min-height: 100%; }
+
+  #viewport { position: fixed; inset: 0; overflow: hidden; }
+  body.grid #viewport { position: static; overflow: visible; display: grid; grid-template-columns: repeat(var(--cols), calc(1920px * var(--k))); gap: 24px; justify-content: center; padding: 72px 24px 120px; }
+
+  .cell { position: absolute; left: calc((100% - 1920px * var(--k)) / 2); top: calc((100% - 1080px * var(--k)) / 2); width: calc(1920px * var(--k)); height: calc(1080px * var(--k)); overflow: hidden; background: #000; opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility 0s linear .22s; }
+  .cell.active { opacity: 1; visibility: visible; transition: opacity .22s ease; }
+  .cell:focus { outline: none; }
+  .cell:focus-visible { outline: 3px solid var(--accent-on-dark); outline-offset: 3px; }
+  body.grid .cell { position: relative; left: auto; top: auto; opacity: 1; visibility: visible; cursor: pointer; border-radius: 6px; box-shadow: 0 0 0 1px #3b4038; transition: box-shadow .15s ease; }
+  body.grid .cell.active { box-shadow: 0 0 0 3px var(--accent); }
+  body.grid .cell:hover { box-shadow: 0 0 0 3px var(--accent-on-dark); }
+  body.grid .cell::after { content: attr(data-n); position: absolute; left: 8px; top: 8px; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 14px; background: rgba(20, 22, 18, .85); color: #f2efe6; font: 600 13px/28px 'IBM Plex Mono', monospace; text-align: center; pointer-events: none; }
+
+  /* La diapositiva: lienzo fijo de 1920x1080 escalado con --k */
+  .cell > section { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; margin: 0; overflow: hidden; transform: scale(var(--k)); transform-origin: 0 0; -webkit-text-size-adjust: none; text-size-adjust: none; }
+  .cell section p, .cell section h1, .cell section h2, .cell section h3, .cell section ul, .cell section ol, .cell section li { margin: 0; }
+  .cell section table { border-collapse: collapse; border-spacing: 0; }
+  .cell section th { font-weight: 700; }
+  .cell section b { font-weight: 700; }
+
+  /* Controles */
+  #ui-progress { position: fixed; left: 0; top: 0; width: 100%; height: 4px; z-index: 20; pointer-events: none; }
+  #ui-progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
+  body.grid #ui-progress { display: none; }
+  #ui-bar { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 4px; padding: 5px 8px; background: rgba(20, 22, 18, .88); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid #3b4038; border-radius: 999px; font-size: 14px; transition: opacity .3s ease; }
+  body.idle #ui-bar { opacity: 0; pointer-events: none; }
+  body.idle { cursor: none; }
+  #ui-bar button, #ui-bar a { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 999px; color: #f2efe6; cursor: pointer; font: inherit; text-decoration: none; }
+  #ui-bar button:hover, #ui-bar a:hover { background: #2a2e28; }
+  #ui-bar button:focus-visible, #ui-bar a:focus-visible { outline: 2px solid var(--accent-on-dark); outline-offset: 1px; }
+  #ui-bar button[disabled] { opacity: .35; cursor: default; }
+  #ui-bar button[disabled]:hover { background: none; }
+  #ui-bar [hidden] { display: none; }
+  #ui-count { min-width: 74px; text-align: center; color: #c9c6ba; }
+  .sep { width: 1px; height: 22px; background: #3b4038; margin: 0 4px; }
+  body.grid .only-present { display: none; }
+  #ui-hint { display: none; position: fixed; left: 24px; top: 20px; z-index: 25; color: #c9c6ba; font-size: 14px; }
+  body.grid #ui-hint { display: block; }
+  #ui-rotate { display: none; position: fixed; left: 12px; right: 12px; top: 14px; z-index: 25; padding: 8px 12px; border-radius: 8px; background: rgba(20, 22, 18, .88); color: #f2efe6; font-size: 13px; text-align: center; pointer-events: none; }
+  @media (orientation: portrait) and (max-width: 700px) { body.present #ui-rotate { display: block; } }
+  @media (prefers-reduced-motion: reduce) { .cell, #ui-progress i, #ui-bar { transition: none; } }
+
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
+    #viewport { position: static !important; display: block !important; padding: 0 !important; overflow: visible !important; }
+    .cell { position: relative !important; left: auto !important; top: auto !important; width: 1920px !important; height: 1080px !important; opacity: 1 !important; visibility: visible !important; box-shadow: none !important; border-radius: 0 !important; break-after: page; page-break-after: always; }
+    .cell:last-child { break-after: auto; page-break-after: auto; }
+    .cell::after { display: none !important; }
+    .cell > section { transform: none !important; }
+    #ui-bar, #ui-progress, #ui-hint, #ui-rotate { display: none !important; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+<noscript><style>
+  body { overflow: auto !important; } #viewport { position: static !important; }
+  .cell { position: relative !important; left: auto !important; top: auto !important; opacity: 1 !important; visibility: visible !important; margin-bottom: 24px; }
+</style></noscript>
+</head>
+<body class="present">
+<main id="viewport" aria-label="Presentación: El patrón MVC — Presentación">
+<div class="cell active" data-slide="cover" data-n="1" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="1 de 20: El patrón MVC">
+<section style="background:#1d201c;color:#f2efe6;font-family:'Source Serif 4',Georgia,serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:center;gap:36px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:500;letter-spacing:4px;text-transform:uppercase;color:#6fb1e0;line-height:1.3">Arquitectura de Software · Patrones arquitectónicos</p>
+<h1 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:200px;font-weight:700;line-height:1;color:#f2efe6">El patrón MVC</h1>
+<p style="font-size:48px;line-height:1.35;color:#cfcabb;width:1300px">Separar lo que sabe, lo que muestra y lo que decide.</p>
+<div style="display:flex;gap:20px;padding:12px 0 0">
+<p style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:44px;font-weight:700;line-height:1;background:#6fb1e0;color:#1d201c;padding:18px 40px 20px;border-radius:50%">Modelo</p>
+<p style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:44px;font-weight:700;line-height:1;background:#e58444;color:#1d201c;padding:18px 40px 20px;border-radius:50%">Vista</p>
+<p style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:44px;font-weight:700;line-height:1;background:#8fc77a;color:#1d201c;padding:18px 40px 20px;border-radius:50%">Controlador</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1500px;font-family:'IBM Plex Mono',monospace;font-size:26px;color:#9a9d8e">Laboratorio: Notas del semestre · mvc-notas-lab.vercel.app</p>
+</section>
+</div>
+<div class="cell" data-slide="hilo" data-n="2" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="2 de 20: De funcionar a poder cambiar">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">Dónde estamos</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">De funcionar a poder cambiar</h2>
+<div style="display:flex;align-items:stretch;gap:20px;padding:24px 0 0">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:36px 32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#5c6158">Paso 1</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#21241f">El problema</h3>
+<p style="font-size:32px;line-height:1.35;color:#3b3f38">El código funciona, pero cada cambio rompe algo más.</p>
+</div>
+<div aria-hidden="true" style="background:#1f5f8b;width:56px;height:30px;align-self:center;display:block;flex:none;clip-path:polygon(0% 32%, 58% 32%, 58% 0%, 100% 50%, 58% 100%, 58% 68%, 0% 68%)"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:36px 32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#5c6158">Paso 2</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#21241f">El principio</h3>
+<p style="font-size:32px;line-height:1.35;color:#3b3f38">Separar responsabilidades: cada pieza, una razón para cambiar.</p>
+</div>
+<div aria-hidden="true" style="background:#1f5f8b;width:56px;height:30px;align-self:center;display:block;flex:none;clip-path:polygon(0% 32%, 58% 32%, 58% 0%, 100% 50%, 58% 100%, 58% 68%, 0% 68%)"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#1f5f8b;border-radius:12px;padding:36px 32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#fbfaf5">Hoy</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#fbfaf5">El patrón</h3>
+<p style="font-size:32px;line-height:1.35;color:#fbfaf5">MVC: Modelo, Vista y Controlador.</p>
+</div>
+<div aria-hidden="true" style="background:#1f5f8b;width:56px;height:30px;align-self:center;display:block;flex:none;clip-path:polygon(0% 32%, 58% 32%, 58% 0%, 100% 50%, 58% 100%, 58% 68%, 0% 68%)"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:36px 32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#5c6158">Luego</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#21241f">La práctica</h3>
+<p style="font-size:32px;line-height:1.35;color:#3b3f38">Laboratorio: del espagueti al MVC.</p>
+</div>
+</div>
+<p style="font-size:38px;line-height:1.4;color:#3b3f38;width:1560px">Una buena arquitectura no hace que el software funcione: hace que <b>cambiarlo sea barato</b>.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="espagueti" data-n="3" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="3 de 20: El código espagueti">
+<section style="background:#eae7de;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">El punto de partida</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">El código espagueti</h2>
+<div style="display:flex;gap:40px;align-items:stretch">
+<div style="width:1090px;display:flex;flex-direction:column;gap:20px;background:#1d201c;border-radius:12px;padding:32px 36px 38px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6fb1e0;line-height:1.3">Una sola función: agregar()</p>
+<div style="display:flex;align-items:center;gap:20px">
+<p style="width:270px;font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;line-height:1.2;text-align:center;text-transform:uppercase;background:#e58444;color:#1d201c;padding:8px 10px;border-radius:50%">Pantalla</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#f2efe6;white-space:nowrap">n = document.getElementById('nombre').value</p>
+</div>
+<div style="display:flex;align-items:center;gap:20px">
+<p style="width:270px;font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;line-height:1.2;text-align:center;text-transform:uppercase;background:#d9d6ca;color:#1d201c;padding:8px 10px;border-radius:50%">Regla + pantalla</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#f2efe6;white-space:nowrap">if (total + p &gt; 100) err.textContent = '…'</p>
+</div>
+<div style="display:flex;align-items:center;gap:20px">
+<p style="width:270px;font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;line-height:1.2;text-align:center;text-transform:uppercase;background:#6fb1e0;color:#1d201c;padding:8px 10px;border-radius:50%">Datos</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#f2efe6;white-space:nowrap">evals.push({ id: sig++, nombre: n })</p>
+</div>
+<div style="display:flex;align-items:center;gap:20px">
+<p style="width:270px;font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;line-height:1.2;text-align:center;text-transform:uppercase;background:#6fb1e0;color:#1d201c;padding:8px 10px;border-radius:50%">Almacenamiento</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#f2efe6;white-space:nowrap">localStorage.setItem('notas.v1', datos)</p>
+</div>
+<div style="display:flex;align-items:center;gap:20px">
+<p style="width:270px;font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;line-height:1.2;text-align:center;text-transform:uppercase;background:#e58444;color:#1d201c;padding:8px 10px;border-radius:50%">Pantalla</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#f2efe6;white-space:nowrap">tabla.innerHTML = filas</p>
+</div>
+</div>
+<div style="width:534px;display:flex;flex-direction:column;gap:16px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1.1;color:#21241f">Cuatro responsabilidades en un solo lugar</h3>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">Cambiar una regla obliga a tocar la pantalla.</p>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">No se puede probar sin abrir el navegador.</p>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">Dos personas no trabajan a la vez sin pisarse.</p>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">La misma regla se copia en varios sitios.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#5c6158">Fragmentos de espagueti.html, el punto de partida del laboratorio</p>
+</section>
+</div>
+<div class="cell" data-slide="tres-lugares" data-n="4" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="4 de 20: 3">
+<section style="background:#1f5f8b;color:#fbfaf5;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#cfe3f2;line-height:1.3">Una pregunta de mantenimiento</p>
+<div style="display:flex;align-items:center;gap:40px">
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:280px;font-weight:700;line-height:1;color:#fbfaf5">3</h2>
+<p style="font-size:54px;line-height:1.3;color:#fbfaf5;width:1100px">veces aparece escrita la nota mínima «3.0» en la versión espagueti.</p>
+</div>
+<div style="display:flex;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#174c73;border-radius:12px;padding:24px 28px 28px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#cfe3f2">En el HTML</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:28px;line-height:1.35;color:#fbfaf5;white-space:nowrap">(nota mínima 3.0)</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#174c73;border-radius:12px;padding:24px 28px 28px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#cfe3f2">En el cálculo</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:28px;line-height:1.35;color:#fbfaf5;white-space:nowrap">nec = (3.0 - acum) / …</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#174c73;border-radius:12px;padding:24px 28px 28px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#cfe3f2">En el estado</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:28px;line-height:1.35;color:#fbfaf5;white-space:nowrap">if (acum &gt;= 3.0) …</p>
+</div>
+</div>
+<p style="font-size:42px;line-height:1.35;color:#fbfaf5;width:1560px">¿Cuántas líneas tocas para pasarla a 3.5? Si olvidas una, la pantalla dice una cosa y el cálculo, otra.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#cfe3f2">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="definicion" data-n="5" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="5 de 20: Qué es un patrón arquitectónico">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">Definición</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">Qué es un patrón arquitectónico</h2>
+<p style="font-size:50px;line-height:1.3;color:#21241f;width:1560px">Una solución conocida y reutilizable a un problema de organización de <b>todo un sistema</b>.</p>
+<div style="display:flex;gap:32px;padding:12px 0 0">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#f1eee4;border-top:8px solid #8a8d80;padding:30px 36px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:60px;font-weight:700;line-height:1.05;color:#21241f">Patrón de diseño</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#5c6158">Escala: clases y objetos</p>
+<p style="font-size:32px;line-height:1.35;color:#3b3f38">Observer, Strategy, Factory Method.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#f1eee4;border-top:8px solid #1f5f8b;padding:30px 36px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:60px;font-weight:700;line-height:1.05;color:#1f5f8b">Patrón arquitectónico</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#5c6158">Escala: la estructura de la aplicación</p>
+<p style="font-size:32px;line-height:1.35;color:#3b3f38">MVC, capas, cliente-servidor.</p>
+</div>
+</div>
+<p style="font-size:38px;line-height:1.4;color:#3b3f38;width:1560px">MVC resuelve un problema concreto: <b>separar la interfaz de la lógica del negocio</b>.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="historia" data-n="6" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="6 de 20: De Xerox PARC a los frameworks">
+<section style="background:#eae7de;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">Un poco de historia</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">De Xerox PARC a los frameworks</h2>
+<div style="display:flex;gap:24px;padding:12px 0 0">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:28px 30px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:84px;font-weight:700;line-height:1;color:#1f5f8b">1979</h3>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">Trygve Reenskaug lo formula en Xerox PARC, para el entorno Smalltalk.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:28px 30px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:84px;font-weight:700;line-height:1;color:#1f5f8b">1988</h3>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">Krasner y Pope lo describen paso a paso para Smalltalk-80.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:28px 30px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:84px;font-weight:700;line-height:1;color:#1f5f8b">1994</h3>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">El libro de la «Banda de los Cuatro» lo usa de ejemplo para Observer, Composite y Strategy.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:28px 30px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:84px;font-weight:700;line-height:1;color:#1f5f8b">2004 →</h3>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">Llega a la web: Rails (2004), Django (2005), ASP.NET MVC (2009), Laravel (2011).</p>
+</div>
+</div>
+<p style="font-size:38px;line-height:1.4;color:#3b3f38;width:1560px">Cambiaron los lenguajes y las pantallas; la idea de separar tres responsabilidades sigue en pie.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1500px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#5c6158">Reenskaug (1979) · Krasner y Pope (1988) · Gamma et al. (1994)</p>
+</section>
+</div>
+<div class="cell" data-slide="tres-piezas" data-n="7" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="7 de 20: Tres piezas, tres responsabilidades">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">La idea central</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">Tres piezas, tres responsabilidades</h2>
+<div style="display:flex;gap:24px;padding:8px 0 0">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#f1eee4;border-top:12px solid #1f5f8b;padding:26px 32px 32px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:68px;font-weight:700;line-height:1.05;color:#1f5f8b">Modelo</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158">Sabe</p>
+<p style="font-size:32px;line-height:1.3;color:#21241f">Los datos y las reglas del negocio.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158">No sabe</p>
+<p style="font-size:32px;line-height:1.3;color:#21241f">Que existe una pantalla.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#f1eee4;border-top:12px solid #a84a14;padding:26px 32px 32px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:68px;font-weight:700;line-height:1.05;color:#a84a14">Vista</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158">Sabe</p>
+<p style="font-size:32px;line-height:1.3;color:#21241f">Cómo mostrar el estado y qué hizo el usuario.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158">No sabe</p>
+<p style="font-size:32px;line-height:1.3;color:#21241f">Ninguna regla de negocio.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#f1eee4;border-top:12px solid #3a6330;padding:26px 32px 32px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:68px;font-weight:700;line-height:1.05;color:#3a6330">Controlador</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158">Sabe</p>
+<p style="font-size:32px;line-height:1.3;color:#21241f">Traducir lo que hace el usuario en órdenes.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158">No sabe</p>
+<p style="font-size:32px;line-height:1.3;color:#21241f">Dibujar ni calcular.</p>
+</div>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#3b3f38;width:1640px">En Notas del semestre: el Modelo guarda pesos y notas y sabe si aprobó; la Vista dibuja la tabla y el resumen; el Controlador recibe «agregar», «calificar» o «eliminar».</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="flujo" data-n="8" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="8 de 20: Qué pasa cuando el usuario actúa">
+<section style="background:#1d201c;color:#f2efe6;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#6fb1e0;line-height:1.3">El recorrido</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#f2efe6">Qué pasa cuando el usuario actúa</h2>
+<div style="display:flex;align-items:stretch;gap:20px;padding:20px 0 0">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#262a24;border-top:10px solid #9a9d8e;padding:28px 28px 34px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#9a9d8e">Paso 1</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#f2efe6">El usuario actúa</h3>
+<p style="font-size:30px;line-height:1.35;color:#d9d6ca">Escribe los datos y hace clic en «Agregar».</p>
+</div>
+<div aria-hidden="true" style="background:#cfcabb;width:52px;height:30px;align-self:center;display:block;flex:none;clip-path:polygon(0% 32%, 58% 32%, 58% 0%, 100% 50%, 58% 100%, 58% 68%, 0% 68%)"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#262a24;border-top:10px solid #8fc77a;padding:28px 28px 34px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#8fc77a">Paso 2 · Controlador</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#f2efe6">Traduce</h3>
+<p style="font-size:30px;line-height:1.35;color:#d9d6ca">Convierte el texto del formulario en una orden para el Modelo.</p>
+</div>
+<div aria-hidden="true" style="background:#cfcabb;width:52px;height:30px;align-self:center;display:block;flex:none;clip-path:polygon(0% 32%, 58% 32%, 58% 0%, 100% 50%, 58% 100%, 58% 68%, 0% 68%)"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#262a24;border-top:10px solid #6fb1e0;padding:28px 28px 34px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#6fb1e0">Paso 3 · Modelo</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#f2efe6">Decide</h3>
+<p style="font-size:30px;line-height:1.35;color:#d9d6ca">Valida las reglas, cambia su estado y avisa que cambió.</p>
+</div>
+<div aria-hidden="true" style="background:#cfcabb;width:52px;height:30px;align-self:center;display:block;flex:none;clip-path:polygon(0% 32%, 58% 32%, 58% 0%, 100% 50%, 58% 100%, 58% 68%, 0% 68%)"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#262a24;border-top:10px solid #e58444;padding:28px 28px 34px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#e58444">Paso 4 · Vista</p>
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#f2efe6">Se redibuja</h3>
+<p style="font-size:30px;line-height:1.35;color:#d9d6ca">Lee el Modelo y muestra la fila nueva.</p>
+</div>
+</div>
+<p style="font-size:36px;line-height:1.4;color:#f2efe6;width:1620px">Si el Modelo rechaza la orden, lanza un error de reglas: el Controlador lo atrapa y le pide a la Vista que muestre el mensaje.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#9a9d8e">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="dependencias" data-n="9" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="9 de 20: Quién conoce a quién">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">La regla de dependencias</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">Quién conoce a quién</h2>
+<div style="position:relative;width:1664px;height:500px">
+<div style="position:absolute;left:692px;top:0px;width:280px;height:110px;background:#1f5f8b;border-radius:12px;display:flex;align-items:center;justify-content:center"><h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1;color:#fbfaf5">Modelo</h3></div>
+<div style="position:absolute;left:120px;top:380px;width:280px;height:110px;background:#a84a14;border-radius:12px;display:flex;align-items:center;justify-content:center"><h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1;color:#fbfaf5">Vista</h3></div>
+<div style="position:absolute;left:1264px;top:380px;width:280px;height:110px;background:#3a6330;border-radius:12px;display:flex;align-items:center;justify-content:center"><h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1;color:#fbfaf5">Controlador</h3></div>
+<svg aria-hidden="true" style="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none"><line x1="1404.0" y1="380.0" x2="986.1" y2="65.6" stroke="#3a6330" stroke-width="4" stroke-linecap="round"/><polygon points="972.0,55.0 994.6,61.5 984.5,74.9" fill="#3a6330"/></svg>
+<svg aria-hidden="true" style="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none"><line x1="1264.0" y1="435.0" x2="417.6" y2="435.0" stroke="#3a6330" stroke-width="4" stroke-linecap="round"/><polygon points="400.0,435.0 422.0,426.6 422.0,443.4" fill="#3a6330"/></svg>
+<svg aria-hidden="true" style="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none"><line x1="260.0" y1="380.0" x2="677.9" y2="65.6" stroke="#a84a14" stroke-width="4" stroke-linecap="round"/><polygon points="692.0,55.0 679.5,74.9 669.4,61.5" fill="#a84a14"/></svg>
+<svg aria-hidden="true" style="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none"><line x1="760.0" y1="110.0" x2="354.8" y2="370.5" stroke="#1f5f8b" stroke-width="4" stroke-linecap="round" stroke-dasharray="12 8"/><polygon points="340.0,380.0 354.0,361.0 363.0,375.2" fill="#1f5f8b"/></svg>
+<p style="position:absolute;left:1250px;top:195px;width:260px;font-size:28px;line-height:1.2;font-weight:600;color:#3a6330">ordena</p>
+<p style="position:absolute;left:470px;top:385px;width:700px;font-size:28px;line-height:1.2;font-weight:600;text-align:center;color:#3a6330">ordena y registra eventos</p>
+<p style="position:absolute;left:250px;top:180px;width:170px;font-size:28px;line-height:1.2;font-weight:600;text-align:right;color:#a84a14">lee</p>
+<p style="position:absolute;left:560px;top:262px;width:380px;font-size:28px;line-height:1.2;font-weight:600;color:#1f5f8b">avisa, sin conocerla</p>
+</div>
+<p style="font-size:38px;line-height:1.35;color:#21241f;width:1640px"><b>Regla de oro:</b> el Modelo no importa nada de la Vista ni del Controlador.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC · línea punteada: aviso por Observer, no una dependencia</p>
+</section>
+</div>
+<div class="cell" data-slide="observer" data-n="10" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="10 de 20: El Modelo avisa sin saber a quién">
+<section style="background:#eae7de;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">Un patrón dentro del patrón</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">El Modelo avisa sin saber a quién</h2>
+<div style="display:flex;gap:40px;align-items:stretch">
+<div style="width:960px;display:flex;flex-direction:column;gap:2px;background:#1d201c;border-radius:12px;padding:30px 36px 36px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6fb1e0;padding:0 0 12px">NotasModelo</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">suscribir(fn) {</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;this.#suscriptores.add(fn);</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;return () =&gt; this.#suscriptores.delete(fn);</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">}</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">#cambio() {</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;this.#almacen.guardar(this.evaluaciones);</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#e58444;white-space:nowrap">&#160;&#160;for (const fn of this.#suscriptores) fn();</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.5;color:#f2efe6;white-space:nowrap">}</p>
+</div>
+<div style="width:664px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:6px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:20px 26px 24px">
+<p style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:44px;font-weight:700;line-height:1.1;color:#1f5f8b">1 · Se suscriben</p>
+<p style="font-size:30px;line-height:1.3;color:#3b3f38">El Modelo guarda una lista de funciones.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:20px 26px 24px">
+<p style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:44px;font-weight:700;line-height:1.1;color:#1f5f8b">2 · Algo cambia</p>
+<p style="font-size:30px;line-height:1.3;color:#3b3f38">Recorre la lista y las llama, una por una.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:20px 26px 24px">
+<p style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:44px;font-weight:700;line-height:1.1;color:#1f5f8b">3 · No sabe quién escucha</p>
+<p style="font-size:30px;line-height:1.3;color:#3b3f38">Una tabla, un termómetro o una prueba.</p>
+</div>
+</div>
+</div>
+<p style="font-size:34px;line-height:1.35;color:#3b3f38;width:1640px">Es el patrón de diseño <b>Observer</b>, que MVC usa por dentro.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#5c6158">Arquitectura de Software · Patrón MVC · extracto de la solución de referencia</p>
+</section>
+</div>
+<div class="cell" data-slide="codigo" data-n="11" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="11 de 20: Notas del semestre en MVC">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">En código</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">Notas del semestre en MVC</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:0;background:#1d201c;border-top:10px solid #6fb1e0;border-radius:0 0 12px 12px;padding:24px 24px 30px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#6fb1e0;padding:0 0 14px">Modelo · modelo.js</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">agregar(datos) {</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;if (!pesoValido(datos.peso))</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;&#160;&#160;throw new ErrorDeReglas(</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;&#160;&#160;&#160;&#160;'Peso fuera de rango');</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;this.#lista.push(datos);</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#6fb1e0;white-space:nowrap">&#160;&#160;this.#cambio(); // avisa</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">}</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:0;background:#1d201c;border-top:10px solid #e58444;border-radius:0 0 12px 12px;padding:24px 24px 30px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#e58444;padding:0 0 14px">Vista · vista.js</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">render() {</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;const r = modelo.resumen();</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;acumulado.textContent =</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;&#160;&#160;r.acumulado.toFixed(2);</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;estado.textContent =</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;&#160;&#160;TEXTO[r.estado];</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">}</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:0;background:#1d201c;border-top:10px solid #8fc77a;border-radius:0 0 12px 12px;padding:24px 24px 30px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#8fc77a;padding:0 0 14px">Controlador · controlador.js</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">vista.alAgregar((datos) =&gt; {</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;try {</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;&#160;&#160;modelo.agregar(datos);</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;} catch (e) {</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;&#160;&#160;vista.mostrarError(</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;&#160;&#160;&#160;&#160;e.message);</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">&#160;&#160;}</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5;color:#f2efe6;white-space:nowrap">});</p>
+</div>
+</div>
+<p style="font-size:34px;line-height:1.4;color:#3b3f38;width:1640px">Cada pieza cabe en una pantalla de código y tiene <b>una sola razón para cambiar</b>.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1500px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Extractos simplificados del laboratorio · Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="donde" data-n="12" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="12 de 20: ¿Modelo, Vista o Controlador?">
+<section style="background:#1d201c;color:#f2efe6;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:30px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#6fb1e0;line-height:1.3">Votación · 4 minutos</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#f2efe6">¿Modelo, Vista o Controlador?</h2>
+<ol style="font-size:36px;line-height:1.55;color:#f2efe6;padding:0 0 0 52px">
+<li>Calcular si el estudiante aprobó</li>
+<li>Poner en rojo el mensaje de error</li>
+<li>Decidir qué ocurre al hacer clic en «Eliminar»</li>
+<li>Validar que el peso esté entre 1 y 100</li>
+<li>Convertir el texto del formulario en un número</li>
+<li>Mostrar la nota con dos decimales</li>
+<li>Guardar los datos en localStorage</li>
+<li>Armar la tabla con textContent y createElement</li>
+</ol>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:500;color:#6fb1e0;line-height:1.3">Voten para cada una: M · V · C</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#9a9d8e">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="olores" data-n="13" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="13 de 20: Cuatro olores de un MVC mal hecho">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">Cuando MVC sale mal</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">Cuatro olores de un MVC mal hecho</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:24px 30px 28px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:50px;font-weight:700;line-height:1.1;color:#3a6330">Controlador gordo</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Síntoma</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">Valida y calcula; el Modelo queda casi vacío.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Arreglo</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">Mover cada regla al Modelo.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:24px 30px 28px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:50px;font-weight:700;line-height:1.1;color:#a84a14">Lógica en la Vista</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Síntoma</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">Un if (nota &gt;= 3) dentro del código de la pantalla.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Arreglo</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">La Vista le pregunta al Modelo; no decide.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:24px 30px 28px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:50px;font-weight:700;line-height:1.1;color:#1f5f8b">Modelo que toca la pantalla</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Síntoma</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">alert(), document o innerHTML dentro del Modelo.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Arreglo</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">El Modelo lanza errores; otros los muestran.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:24px 30px 28px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:50px;font-weight:700;line-height:1.1;color:#1f5f8b">Modelo anémico</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Síntoma</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">Solo datos y getters; las reglas viven en otro lado.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#5c6158;line-height:1.3">Arreglo</p>
+<p style="font-size:30px;line-height:1.3;color:#21241f">Que el Modelo proteja sus propias reglas.</p>
+</div>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#3b3f38;width:1640px">En el laboratorio, las pruebas de arquitectura detectan los dos del medio.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="variantes" data-n="14" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="14 de 20: MVC y sus parientes">
+<section style="background:#eae7de;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">La familia</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">MVC y sus parientes</h2>
+<table style="width:1664px;font-size:30px;color:#21241f;background:#fbfaf5">
+<tr style="background:#1f5f8b"><th style="width:22%;text-align:left;padding:16px 22px;color:#fbfaf5"></th><th style="width:26%;text-align:left;padding:16px 22px;color:#fbfaf5">MVC · hoy</th><th style="width:26%;text-align:left;padding:16px 22px;color:#fbfaf5">MVP</th><th style="width:26%;text-align:left;padding:16px 22px;color:#fbfaf5">MVVM</th></tr>
+<tr style="background:#f1eee4"><td style="padding:16px 22px"><b>Quién media</b></td><td style="padding:16px 22px">Controlador</td><td style="padding:16px 22px">Presentador</td><td style="padding:16px 22px">ViewModel</td></tr>
+<tr><td style="padding:16px 22px"><b>La Vista…</b></td><td style="padding:16px 22px">Lee el Modelo y se suscribe</td><td style="padding:16px 22px">Es pasiva: el Presentador le da todo</td><td style="padding:16px 22px">Se enlaza al ViewModel (binding)</td></tr>
+<tr style="background:#f1eee4"><td style="padding:16px 22px"><b>Suele verse en</b></td><td style="padding:16px 22px">Frameworks web de servidor</td><td style="padding:16px 22px">Escritorio y móviles</td><td style="padding:16px 22px">Interfaces con enlace de datos</td></tr>
+</table>
+<p style="font-size:34px;line-height:1.4;color:#21241f;width:1640px">En la web, con servidor: <b>petición → Controlador → Modelo → Vista (HTML)</b>.</p>
+<p style="font-size:30px;line-height:1.4;color:#5c6158;width:1640px">Fowler lo resume así: bajo el nombre «MVC» conviven variantes muy distintas. Hoy fijamos una.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#5c6158">Arquitectura de Software · Patrón MVC · Fowler, «GUI Architectures»</p>
+</section>
+</div>
+<div class="cell" data-slide="frameworks" data-n="15" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="15 de 20: MVC en los frameworks">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">En la práctica</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">MVC en los frameworks</h2>
+<table style="width:1664px;font-size:28px;color:#21241f;background:#fbfaf5">
+<tr><th style="width:23%;text-align:left;padding:14px 22px;color:#5c6158"></th><th style="width:25%;text-align:left;padding:14px 22px;color:#1f5f8b">Modelo</th><th style="width:25%;text-align:left;padding:14px 22px;color:#a84a14">Vista</th><th style="width:27%;text-align:left;padding:14px 22px;color:#3a6330">Controlador</th></tr>
+<tr style="background:#f1eee4"><td style="padding:14px 22px"><b>Laravel</b> · PHP</td><td style="padding:14px 22px">Eloquent · app/Models</td><td style="padding:14px 22px">Blade · resources/views</td><td style="padding:14px 22px">app/Http/Controllers</td></tr>
+<tr><td style="padding:14px 22px"><b>Spring MVC</b> · Java</td><td style="padding:14px 22px">Entidades y servicios del dominio</td><td style="padding:14px 22px">Thymeleaf o JSP</td><td style="padding:14px 22px">Clases con @Controller</td></tr>
+<tr style="background:#f1eee4"><td style="padding:14px 22px"><b>ASP.NET Core MVC</b> · C#</td><td style="padding:14px 22px">Carpeta Models/</td><td style="padding:14px 22px">Views/ (Razor)</td><td style="padding:14px 22px">Carpeta Controllers/</td></tr>
+<tr><td style="padding:14px 22px"><b>Django</b> · Python</td><td style="padding:14px 22px">models.py</td><td style="padding:14px 22px">templates/</td><td style="padding:14px 22px">views.py</td></tr>
+</table>
+<p style="font-size:34px;line-height:1.4;color:#21241f;width:1640px">Los nombres cambian; <b>las tres responsabilidades siguen ahí</b>.</p>
+<p style="font-size:30px;line-height:1.4;color:#5c6158;width:1640px">Django lo llama MTV (Model · Template · View): lo que allí se llama «view» hace de controlador.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC · convenciones de carpetas de cada framework</p>
+</section>
+</div>
+<div class="cell" data-slide="costos" data-n="16" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="16 de 20: Beneficios y costos">
+<section style="background:#eae7de;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">La balanza</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">Beneficios y costos</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#fbfaf5;border-top:8px solid #1f5f8b;padding:28px 36px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:60px;font-weight:700;line-height:1.05;color:#1f5f8b">Beneficios</h3>
+<ul style="font-size:32px;line-height:1.5;color:#21241f;padding:0 0 0 36px">
+<li>Probar el Modelo sin pantalla</li>
+<li>Varias vistas del mismo Modelo</li>
+<li>Trabajo en paralelo: una pieza por persona</li>
+<li>Cambios localizados</li>
+</ul>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#fbfaf5;border-top:8px solid #8f2b21;padding:28px 36px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:60px;font-weight:700;line-height:1.05;color:#8f2b21">Costos</h3>
+<ul style="font-size:32px;line-height:1.5;color:#21241f;padding:0 0 0 36px">
+<li>Más archivos y más indirección</li>
+<li>Exagerado para una app de 100 líneas</li>
+<li>Fácil mezclar roles: «¿esto dónde va?»</li>
+<li>Hay que aprender el vocabulario</li>
+</ul>
+</div>
+</div>
+<p style="font-size:40px;line-height:1.35;color:#21241f;width:1600px">MVC no es un fin: es una forma de <b>pagar menos cada vez que hay que cambiar</b>.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#5c6158">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="separacion" data-n="17" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="17 de 20: ¿Está bien separado? Tres preguntas">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">Cómo saber si funcionó</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">¿Está bien separado? Tres preguntas</h2>
+<div style="display:flex;gap:24px;padding:8px 0 0">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#f1eee4;border-top:12px solid #1f5f8b;padding:28px 30px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#1f5f8b">¿Pruebo el Modelo sin navegador?</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#21241f">npm test</p>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">39 pruebas del Modelo, sin abrir una sola página.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#f1eee4;border-top:12px solid #a84a14;padding:28px 30px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#a84a14">¿Agrego otra vista sin tocar el Modelo?</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#21241f">Parte 5B</p>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">El termómetro: un archivo nuevo y una línea en main.js.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;background:#f1eee4;border-top:12px solid #1f5f8b;padding:28px 30px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:52px;font-weight:700;line-height:1.1;color:#1f5f8b">¿Cambio dónde se guardan los datos?</h3>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#21241f">Parte 5C</p>
+<p style="font-size:30px;line-height:1.35;color:#3b3f38">Solo almacen.js y main.js: el Modelo ni se entera.</p>
+</div>
+</div>
+<p style="font-size:34px;line-height:1.4;color:#21241f;width:1640px">Y una máquina lo vigila: <b>pruebas de arquitectura</b> que fallan si el Modelo usa el DOM o la Vista decide reglas.</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC · npm run arquitectura</p>
+</section>
+</div>
+<div class="cell" data-slide="lab-puente" data-n="18" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="18 de 20: El laboratorio de hoy">
+<section style="background:#1d201c;color:#f2efe6;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:30px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#6fb1e0;line-height:1.3">Manos a la obra · ≈ 2 h 20 min</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#f2efe6">El laboratorio de hoy</h2>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<table style="width:960px;font-size:30px;color:#f2efe6;background:#1d201c">
+<tr style="background:#262a24"><td style="padding:10px 22px">0 · Preparación</td><td style="padding:10px 22px;color:#6fb1e0">10 min</td></tr>
+<tr><td style="padding:10px 22px">1 · Leer el espagueti</td><td style="padding:10px 22px;color:#6fb1e0">20 min</td></tr>
+<tr style="background:#262a24"><td style="padding:10px 22px">2 · El Modelo</td><td style="padding:10px 22px;color:#6fb1e0">30 min</td></tr>
+<tr><td style="padding:10px 22px">3 · La Vista</td><td style="padding:10px 22px;color:#6fb1e0">20 min</td></tr>
+<tr style="background:#262a24"><td style="padding:10px 22px">4 · El Controlador</td><td style="padding:10px 22px;color:#6fb1e0">20 min</td></tr>
+<tr><td style="padding:10px 22px">5 · Tres cambios</td><td style="padding:10px 22px;color:#6fb1e0">25 min</td></tr>
+<tr style="background:#262a24"><td style="padding:10px 22px">6 · Medir y entregar</td><td style="padding:10px 22px;color:#6fb1e0">15 min</td></tr>
+</table>
+<div style="width:664px;display:flex;flex-direction:column;gap:12px;background:#262a24;border:2px solid #3b4038;border-radius:12px;padding:28px 32px 32px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1.1;color:#6fb1e0">Cada equipo entrega</h3>
+<p style="font-size:30px;line-height:1.3;color:#f2efe6">El enlace de su repositorio</p>
+<p style="font-size:30px;line-height:1.3;color:#f2efe6">npm test: 54 de 54 en verde</p>
+<p style="font-size:30px;line-height:1.3;color:#f2efe6">3 commits para los 3 cambios</p>
+<p style="font-size:30px;line-height:1.3;color:#f2efe6">ENTREGA.md completo</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.35;color:#6fb1e0">Ruta corta ≈ 100 min: partes 0 a 4</p>
+</div>
+</div>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.4;color:#f2efe6;width:1640px">Guía: mvc-notas-lab.vercel.app/guia.html</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;line-height:1.4;color:#f2efe6;width:1640px">Plantilla: github.com/xaviercardona-ops/mvc-notas-lab</p>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#9a9d8e">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="demo" data-n="19" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="19 de 20: Demostración en vivo">
+<section style="background:#fbfaf5;color:#21241f;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#1f5f8b;line-height:1.3">Antes de empezar · 5 min</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#21241f">Demostración en vivo</h2>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:32px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:20px 32px 22px">
+<p style="width:64px;font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:76px;font-weight:700;line-height:1;color:#1f5f8b">1</p>
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:30px;line-height:1.4;font-weight:600;color:#21241f;white-space:nowrap">npm start</p>
+<p style="font-size:30px;line-height:1.3;color:#3b3f38">Abrir espagueti.html y agregar una evaluación: funciona.</p>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:32px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:20px 32px 22px">
+<p style="width:64px;font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:76px;font-weight:700;line-height:1;color:#1f5f8b">2</p>
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:30px;line-height:1.4;font-weight:600;color:#21241f;white-space:nowrap">&lt;b&gt;hola&lt;/b&gt; como nombre</p>
+<p style="font-size:30px;line-height:1.3;color:#3b3f38">La pantalla lo interpreta como HTML: un olor, y un riesgo.</p>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:32px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:20px 32px 22px">
+<p style="width:64px;font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:76px;font-weight:700;line-height:1;color:#1f5f8b">3</p>
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:30px;line-height:1.4;font-weight:600;color:#21241f;white-space:nowrap">npm test</p>
+<p style="font-size:30px;line-height:1.3;color:#3b3f38">Las pruebas del Modelo: rojo en el esqueleto, verde en la solución.</p>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:32px;background:#f1eee4;border:2px solid #dbd7c9;border-radius:12px;padding:20px 32px 22px">
+<p style="width:64px;font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:76px;font-weight:700;line-height:1;color:#1f5f8b">4</p>
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:30px;line-height:1.4;font-weight:600;color:#21241f;white-space:nowrap">npm run arquitectura</p>
+<p style="font-size:30px;line-height:1.3;color:#3b3f38">Escribir document en el Modelo a propósito y ver cómo falla.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6b6f63">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+<div class="cell" data-slide="cierre" data-n="20" tabindex="0" role="group" aria-roledescription="diapositiva" aria-label="20 de 20: Para llevarse">
+<section style="background:#1d201c;color:#f2efe6;font-family:'Source Serif 4',Georgia,serif;padding:88px 128px 150px;display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:#6fb1e0;line-height:1.3">Cierre</p>
+<h2 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:88px;font-weight:700;line-height:1.05;color:#f2efe6">Para llevarse</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#262a24;border-top:10px solid #6fb1e0;padding:28px 32px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1.1;color:#6fb1e0">El Modelo no conoce a nadie</h3>
+<p style="font-size:30px;line-height:1.35;color:#f2efe6">Lo que el Modelo no conoce, no se le rompe.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#262a24;border-top:10px solid #e58444;padding:28px 32px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1.1;color:#e58444">Un lugar por cada cambio</h3>
+<p style="font-size:30px;line-height:1.35;color:#f2efe6">Cada razón para cambiar vive en una sola pieza.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#262a24;border-top:10px solid #8fc77a;padding:28px 32px 34px">
+<h3 style="font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-size:56px;font-weight:700;line-height:1.1;color:#8fc77a">MVC es un medio</h3>
+<p style="font-size:30px;line-height:1.35;color:#f2efe6">Úsalo cuando la separación pague, no por moda.</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:12px 0 0">
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#6fb1e0;line-height:1.4">Referencias</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#c9c6ba;white-space:nowrap">Reenskaug, T. (1979). Models–Views–Controllers. Informe técnico, Xerox PARC.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#c9c6ba;white-space:nowrap">Krasner y Pope (1988). A cookbook for using the Model-View-Controller user interface paradigm in Smalltalk-80.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#c9c6ba;white-space:nowrap">Gamma, Helm, Johnson y Vlissides (1994). Design Patterns. Addison-Wesley.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#c9c6ba;white-space:nowrap">Buschmann et al. (1996). Pattern-Oriented Software Architecture, vol. 1. Wiley.</p>
+<p style="font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.4;color:#c9c6ba;white-space:nowrap">Fowler, M. GUI Architectures. martinfowler.com/eaaDev/uiArchs.html</p>
+</div>
+<p style="position:absolute;left:128px;bottom:56px;width:1400px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#9a9d8e">Arquitectura de Software · Patrón MVC</p>
+</section>
+</div>
+</main>
+
+<div id="ui-progress" aria-hidden="true"><i></i></div>
+<div id="ui-hint" aria-hidden="true">Todas las diapositivas · clic para abrir una · Esc para volver</div>
+<div id="ui-rotate" aria-hidden="true">Gira el teléfono para ver las diapositivas más grandes</div>
+<nav id="ui-bar" aria-label="Controles de la presentación">
+  <a href="/guia.html" title="Guía del laboratorio">Guía</a>
+  <span class="sep only-present" aria-hidden="true"></span>
+  <button type="button" id="ui-prev" class="only-present" aria-label="Diapositiva anterior" title="Anterior (←)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <span id="ui-count" class="only-present" aria-live="polite">1 / 20</span>
+  <button type="button" id="ui-next" class="only-present" aria-label="Diapositiva siguiente" title="Siguiente (→)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" id="ui-grid" aria-label="Ver todas las diapositivas" aria-pressed="false" title="Ver todas (O)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button>
+  <button type="button" id="ui-full" aria-label="Pantalla completa" title="Pantalla completa (F)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button type="button" id="ui-print" aria-label="Imprimir o guardar como PDF" title="Imprimir o guardar como PDF"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg></button>
+</nav>
+
+<script>
+(() => {
+  const ids = ["cover","hilo","espagueti","tres-lugares","definicion","historia","tres-piezas","flujo","dependencias","observer","codigo","donde","olores","variantes","frameworks","costos","separacion","lab-puente","demo","cierre"];
+  const body = document.body;
+  const root = document.documentElement;
+  const cells = [...document.querySelectorAll('.cell')];
+  const total = cells.length;
+  const bar = document.getElementById('ui-bar');
+  const count = document.getElementById('ui-count');
+  const prevBtn = document.getElementById('ui-prev');
+  const nextBtn = document.getElementById('ui-next');
+  const gridBtn = document.getElementById('ui-grid');
+  const fullBtn = document.getElementById('ui-full');
+  const printBtn = document.getElementById('ui-print');
+  const progress = document.querySelector('#ui-progress i');
+  const isGrid = () => body.classList.contains('grid');
+  let cur = 0;
+  let idleTimer = 0;
+
+  function fit() {
+    if (isGrid()) {
+      const vw = root.clientWidth, pad = 24, gap = 24, target = 380;
+      const cols = Math.max(1, Math.floor((vw - pad * 2 + gap) / (target + gap)));
+      const w = Math.min(560, (vw - pad * 2 - gap * (cols - 1)) / cols);
+      root.style.setProperty('--cols', cols);
+      root.style.setProperty('--k', (w / 1920).toFixed(5));
+    } else {
+      root.style.setProperty('--k', Math.min(window.innerWidth / 1920, window.innerHeight / 1080).toFixed(5));
+    }
+  }
+
+  function render() {
+    cells.forEach((c, i) => {
+      c.classList.toggle('active', i === cur);
+      c.inert = !isGrid() && i !== cur;
+    });
+    count.textContent = (cur + 1) + ' / ' + total;
+    prevBtn.disabled = cur === 0;
+    nextBtn.disabled = cur === total - 1;
+    progress.style.width = ((cur + 1) / total * 100) + '%';
+  }
+
+  function go(n, noHash) {
+    cur = Math.max(0, Math.min(total - 1, n));
+    render();
+    if (!noHash) history.replaceState(null, '', '#' + ids[cur]);
+  }
+
+  function fromHash() {
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (!h) return 0;
+    const byId = ids.indexOf(h);
+    if (byId >= 0) return byId;
+    const n = parseInt(h, 10);
+    return Number.isFinite(n) ? n - 1 : 0;
+  }
+
+  function setGrid(on) {
+    body.classList.toggle('grid', on);
+    body.classList.toggle('present', !on);
+    gridBtn.setAttribute('aria-pressed', String(on));
+    body.classList.remove('idle');
+    fit();
+    render();
+    if (on) cells[cur].scrollIntoView({ block: 'center' });
+    else window.scrollTo(0, 0);
+  }
+
+  function toggleFull() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else root.requestFullscreen().catch(() => {});
+  }
+  if (!root.requestFullscreen) fullBtn.hidden = true;
+
+  function wake() {
+    body.classList.remove('idle');
+    clearTimeout(idleTimer);
+    if (isGrid() || !matchMedia('(hover: hover)').matches) return;
+    idleTimer = setTimeout(() => {
+      if (!bar.matches(':focus-within')) body.classList.add('idle');
+    }, 2600);
+  }
+
+  prevBtn.addEventListener('click', () => go(cur - 1));
+  nextBtn.addEventListener('click', () => go(cur + 1));
+  gridBtn.addEventListener('click', () => setGrid(!isGrid()));
+  fullBtn.addEventListener('click', toggleFull);
+  printBtn.addEventListener('click', () => window.print());
+
+  cells.forEach((c, i) => {
+    c.addEventListener('click', (e) => {
+      if (isGrid()) { go(i); setGrid(false); return; }
+      if (e.target.closest('a')) return;
+      if (String(getSelection()).length) return;
+      const x = e.clientX / window.innerWidth;
+      go(x < 0.3 ? cur - 1 : cur + 1);
+    });
+    c.addEventListener('keydown', (e) => {
+      if (isGrid() && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); go(i); setGrid(false); }
+    });
+  });
+
+  addEventListener('keydown', (e) => {
+    wake();
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const onControl = e.target.closest && e.target.closest('button, a');
+    const k = e.key;
+    if (isGrid()) {
+      const cols = parseInt(getComputedStyle(root).getPropertyValue('--cols'), 10) || 1;
+      const move = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols }[k];
+      if (move) { e.preventDefault(); go(cur + move, true); cells[cur].focus(); cells[cur].scrollIntoView({ block: 'nearest' }); return; }
+      if (k === 'Escape' || k === 'o' || k === 'O' || k === 'g' || k === 'G') { e.preventDefault(); setGrid(false); }
+      return;
+    }
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || ((k === ' ' || k === 'Enter') && !onControl)) {
+      e.preventDefault(); go(cur + (e.shiftKey && k === ' ' ? -1 : 1));
+    } else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace') {
+      e.preventDefault(); go(cur - 1);
+    } else if (k === 'Home') { e.preventDefault(); go(0); }
+    else if (k === 'End') { e.preventDefault(); go(total - 1); }
+    else if (k === 'f' || k === 'F') toggleFull();
+    else if (k === 'o' || k === 'O' || k === 'g' || k === 'G') setGrid(true);
+  });
+
+  let tx = 0, ty = 0;
+  const vp = document.getElementById('viewport');
+  vp.addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+  vp.addEventListener('touchend', (e) => {
+    if (isGrid()) return;
+    const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+
+  addEventListener('resize', fit);
+  addEventListener('pointermove', wake);
+  addEventListener('pointerdown', wake);
+  addEventListener('hashchange', () => go(fromHash(), true));
+
+  fit();
+  go(fromHash(), true);
+  wake();
+})();
+</script>
+</body>
+</html>

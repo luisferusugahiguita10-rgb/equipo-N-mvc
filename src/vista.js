@@ -26,14 +26,20 @@ export class NotasVista {
     // TODO 3B: cuando se envíe el formulario (submit, sin recargar la página) llama a manejador(this.leerFormulario()).
   }
 
+  // EJEMPLO RESUELTO (para que hagas alAgregar y alCalificar igual): un solo escuchador en la tabla
+  // sirve para todas las filas (delegación de eventos); el id viaja en el atributo data-eliminar.
+  // Funciona cuando termines 3A (this.#el.tabla) y 3D (los botones "Eliminar" con data-eliminar).
   alEliminar(manejador) {
-    // TODO 3B: cuando se haga clic en un botón "Eliminar" de la tabla, llama a manejador(id).
-    //          Pista: un solo escuchador en la tabla (delegación) y el id guardado en data-eliminar.
+    this.#el.tabla.addEventListener('click', (evento) => {
+      const boton = evento.target.closest('button[data-eliminar]');
+      if (boton) manejador(Number(boton.dataset.eliminar));
+    });
   }
 
   alCalificar(manejador) {
     // TODO 3B: cuando cambie una nota de la tabla, llama a manejador(id, textoEscrito).
-    //          Pista: evento "change" en la tabla y el id guardado en data-nota.
+    //          Pista: igual que alEliminar, pero con el evento "change" y el id guardado en data-nota
+    //          (el <input> de la nota; textoEscrito es su .value).
   }
 
   // ---------------------------------------------------------- 3C · Órdenes que la Vista obedece
