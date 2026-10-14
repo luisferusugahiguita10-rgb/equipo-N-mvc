@@ -62,6 +62,12 @@ export class NotasModelo {
     }
     const notaValida = this.#validarNota(nota);
 
+    // 5A · Los nombres son únicos (sin importar mayúsculas ni espacios sobrantes).
+    const clave = nombreLimpio.toLowerCase();
+    if (this.#evaluaciones.some((e) => e.nombre.toLowerCase() === clave)) {
+      throw new ErrorDeReglas('Ya existe una evaluación con ese nombre.');
+    }
+
     const total = this.#evaluaciones.reduce((suma, e) => suma + e.peso, 0);
     if (total + peso > 100 + EPS) {
       const quedan = Math.round((100 - total) * 100) / 100;
