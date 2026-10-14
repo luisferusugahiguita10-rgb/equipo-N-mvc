@@ -51,39 +51,89 @@ export class NotasModelo {
 
   // ---------------------------------------------------------------- 2A · Agregar y validar
   agregar({ nombre, peso, nota = null }) {
-    // TODO 2A: valida, EN ESTE ORDEN: nombre, peso, nota y suma de pesos (mensajes en la guía).
-    //          Si todo está bien: crea { id, nombre, peso, nota }, agrégalo y llama a this.#cambio().
-    //          Si algo está mal: lanza new ErrorDeReglas('...') SIN cambiar nada.
-    throw new Error('TODO 2A · agregar()');
+    // Orden de las reglas: nombre (R1, R2), peso (R3), nota (R4) y al final la suma de pesos (R5).
+    const nombreLimpio = String(nombre ?? '').trim();
+    if (nombreLimpio === '') throw new ErrorDeReglas('El nombre es obligatorio.');
+    if (nombreLimpio.length > MAX_NOMBRE) {
+      throw new ErrorDeReglas(`El nombre no puede superar ${MAX_NOMBRE} caracteres.`);
+    }
+    if (!Number.isFinite(peso) || peso < 1 || peso > 100) {
+      throw new ErrorDeReglas('El peso debe estar entre 1 y 100.');
+    }
+    const notaValida = this.#validarNota(nota);
+
+    const total = this.#evaluaciones.reduce((suma, e) => suma + e.peso, 0);
+    if (total + peso > 100 + EPS) {
+      const quedan = Math.round((100 - total) * 100) / 100;
+      throw new ErrorDeReglas(`Los pesos no pueden sumar más de 100 % (te quedan ${quedan} %).`);
+    }
+
+    // El id solo se consume cuando todo salió bien (por eso se incrementa aquí y no antes).
+    this.#evaluaciones.push({ id: this.#siguienteId++, nombre: nombreLimpio, peso, nota: notaValida });
+    this.#cambio();
   }
 
   // ---------------------------------------------------------------- 2B · Calificar y eliminar
   calificar(id, nota) {
-    // TODO 2B: la nota puede ser null (quitar) o un número entre 0 y 5. Si el id no existe → ErrorDeReglas.
-    throw new Error('TODO 2B · calificar()');
+    const evaluacion = this.#buscar(id);
+    evaluacion.nota = this.#validarNota(nota);
+    this.#cambio();
   }
 
   eliminar(id) {
-    // TODO 2B: quita la evaluación. Si el id no existe → ErrorDeReglas.
-    throw new Error('TODO 2B · eliminar()');
+    const evaluacion = this.#buscar(id);
+    this.#evaluaciones = this.#evaluaciones.filter((e) => e !== evaluacion);
+    this.#cambio();
   }
 
   // ---------------------------------------------------------------- 2C · Resumen
   resumen() {
-    // TODO 2C: devuelve { acumulado, pesoCalificado, pesoPendiente, notaNecesaria, estado }.
-    //          Usa NOTA_MINIMA, NOTA_MAXIMA, UMBRAL_RIESGO, EPS y redondearArriba (ya están arriba).
-    throw new Error('TODO 2C · resumen()');
+    const calificadas = this.#evaluaciones.filter((e) => e.nota !== null);
+    const acumulado = calificadas.reduce((suma, e) => suma + (e.peso * e.nota) / 100, 0);
+    const pesoCalificado = calificadas.reduce((suma, e) => suma + e.peso, 0);
+    const pesoPendiente = 100 - pesoCalificado;
+
+    // Si no queda peso por calificar no existe "nota necesaria" (dividiríamos entre cero).
+    const notaNecesaria =
+      pesoPendiente > 0
+        ? redondearArriba(Math.max(0, (NOTA_MINIMA - acumulado) / (pesoPendiente / 100)))
+        : null;
+
+    let estado;
+    if (acumulado + EPS >= NOTA_MINIMA) estado = 'aprobado';
+    else if (notaNecesaria === null || notaNecesaria > NOTA_MAXIMA) estado = 'imposible';
+    else if (notaNecesaria > UMBRAL_RIESGO) estado = 'en-riesgo';
+    else estado = 'en-camino';
+
+    return { acumulado, pesoCalificado, pesoPendiente, notaNecesaria, estado };
   }
 
   // ---------------------------------------------------------------- 2D · Observer y persistencia
   suscribir(suscriptor) {
-    // TODO 2D: guarda el suscriptor y devuelve una función que lo cancele.
-    throw new Error('TODO 2D · suscribir()');
+    this.#suscriptores.add(suscriptor);
+    return () => this.#suscriptores.delete(suscriptor);
   }
 
   #cambio() {
-    // TODO 2D: después de CADA cambio: guarda en el almacén (this.#almacen.guardar(...)) y avisa a los suscriptores.
+    this.#almacen.guardar(this.#evaluaciones);
+    // Se recorre una copia: si un suscriptor se cancela mientras lo avisamos, no se rompe el ciclo.
+    for (const suscriptor of [...this.#suscriptores]) suscriptor();
   }
 
-  // Puedes agregar aquí los métodos privados que necesites (por ejemplo #buscar(id) o #validarNota(nota)).
+  // ---------------------------------------------------------------- Ayudas privadas
+  /** Devuelve la evaluación con ese id (la original, no una copia) o lanza R6. */
+  #buscar(id) {
+    const evaluacion = this.#evaluaciones.find((e) => e.id === id);
+    if (!evaluacion) throw new ErrorDeReglas('No existe la evaluación.');
+    return evaluacion;
+  }
+
+  /** R4: la nota puede faltar (null) o ser un número entre 0 y 5. Devuelve la nota normalizada. */
+  #validarNota(nota) {
+    if (nota === null || nota === undefined) return null;
+    if (!Number.isFinite(nota) || nota < 0 || nota > NOTA_MAXIMA) {
+      throw new ErrorDeReglas('La nota debe estar entre 0 y 5.');
+    }
+    return nota;
+  }
 }
