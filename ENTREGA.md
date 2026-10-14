@@ -2,7 +2,7 @@
 
 **Equipo:** Trabajo individual  
 **Integrantes:** Luis Fernando Usuga Higuita  
-**Repositorio:** _(pega aquí el enlace público de tu repositorio de GitHub)_
+**Repositorio:** https://github.com/luisferusugahiguita10-rgb/equipo-N-mvc
 
 ---
 
@@ -121,14 +121,14 @@ ARQUITECTURA
 
 ## 5. Tres cambios, tres lugares (Parte 5)
 
-**5A · Nombres únicos** (`git show --stat 941c1af`)
+**5A · Nombres únicos** (`git show --stat 60bb33c`)
 
 ```text
  src/modelo.js | 6 ++++++
  1 file changed, 6 insertions(+)
 ```
 
-**5B · Segunda vista, el termómetro** (`git show --stat 17f7a81`)
+**5B · Segunda vista, el termómetro** (`git show --stat 2b53159`)
 
 ```text
  src/main.js             |  5 ++++-
@@ -136,7 +136,7 @@ ARQUITECTURA
  2 files changed, 51 insertions(+), 1 deletion(-)
 ```
 
-**5C · Otro almacén** (`git show --stat aa4ba62`)
+**5C · Otro almacén** (`git show --stat eafed7c`)
 
 ```text
  src/almacen.js | 21 +++++++++++++++++++++
