@@ -18,13 +18,41 @@ export class NotasControlador {
     this.#modelo = modelo;
     this.#vista = vista;
 
-    // TODO 4A: regístrate en la Vista (vista.alAgregar, vista.alEliminar, vista.alCalificar).
-    //          Cada manejador convierte los datos (la Vista entrega TEXTO; el Modelo espera números y null)
-    //          y le da la orden al Modelo.
+    // 4A · Me registro en la Vista. Ella entrega TEXTO; el Modelo espera números y null (nota vacía = sin nota).
+    vista.alAgregar(({ nombre, peso, nota }) => {
+      this.#intentar(() => {
+        this.#modelo.agregar({ nombre, peso: parseFloat(peso), nota: this.#aNota(nota) });
+        this.#vista.limpiarFormulario();
+      });
+    });
+
+    vista.alEliminar((id) => {
+      this.#intentar(() => this.#modelo.eliminar(id));
+    });
+
+    vista.alCalificar((id, texto) => {
+      this.#intentar(() => this.#modelo.calificar(id, this.#aNota(texto)));
+    });
   }
 
-  // TODO 4B: un método privado que ejecute una orden al Modelo y, si lanza un ErrorDeReglas, le pida a la Vista
-  //          que muestre el mensaje (y que se redibuje, para deshacer lo que el usuario escribió y el Modelo no aceptó).
-  //          Los errores que NO sean de reglas no se esconden: se vuelven a lanzar.
-  //          Si todo sale bien: limpia el error. Para "agregar", además limpia el formulario.
+  /** Traduce el texto de una nota: vacío → null (sin nota); lo demás → número (NaN si no lo es; el Modelo lo rechaza). */
+  #aNota(texto) {
+    return String(texto).trim() === '' ? null : parseFloat(texto);
+  }
+
+  /**
+   * 4B · Ejecuta una orden al Modelo. Si el Modelo la rechaza (ErrorDeReglas) la Vista muestra el mensaje y se
+   * redibuja, así el campo vuelve al valor que el Modelo sí aceptó. Si sale bien, se limpia el error.
+   * Los errores que NO son de reglas no se esconden: se vuelven a lanzar.
+   */
+  #intentar(orden) {
+    try {
+      orden();
+      this.#vista.limpiarError();
+    } catch (error) {
+      if (!(error instanceof ErrorDeReglas)) throw error;
+      this.#vista.mostrarError(error.message);
+      this.#vista.render();
+    }
+  }
 }
