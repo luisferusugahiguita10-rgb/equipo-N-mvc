@@ -20,6 +20,7 @@ const redondear2 = (n) => Math.round(n * 100) / 100;
 export class NotasVista {
   #modelo;
   #el;
+  #dibujando = false; // evita redibujos anidados (ver render)
 
   constructor(raiz, modelo) {
     this.#modelo = modelo;
@@ -93,6 +94,18 @@ export class NotasVista {
 
   /** Dibuja TODO a partir del Modelo. No decide nada: solo presenta. */
   render() {
+    // Al quitar de la tabla un campo con el foco, el navegador dispara 'change'/'blur' en pleno redibujo, lo que
+    // podría volver a llamar a render() a mitad de camino. Con esta guarda ese redibujo anidado se ignora.
+    if (this.#dibujando) return;
+    this.#dibujando = true;
+    try {
+      this.#dibujarTodo();
+    } finally {
+      this.#dibujando = false;
+    }
+  }
+
+  #dibujarTodo() {
     const evaluaciones = this.#modelo.evaluaciones;
     this.#dibujarTabla(evaluaciones);
     this.#el.vacio.hidden = evaluaciones.length > 0;
