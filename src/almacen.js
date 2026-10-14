@@ -45,3 +45,24 @@ export class AlmacenLocal {
     localStorage.setItem(this.#clave, JSON.stringify(evaluaciones));
   }
 }
+
+/** Guarda en sessionStorage: sobrevive a las recargas, pero se pierde al cerrar la pestaña. */
+export class AlmacenSesion {
+  #clave;
+
+  constructor(clave = 'notas.v1') {
+    this.#clave = clave;
+  }
+
+  cargar() {
+    try {
+      return JSON.parse(sessionStorage.getItem(this.#clave) ?? '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  guardar(evaluaciones) {
+    sessionStorage.setItem(this.#clave, JSON.stringify(evaluaciones));
+  }
+}

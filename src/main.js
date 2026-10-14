@@ -5,10 +5,10 @@ import { NotasModelo } from './modelo.js';
 import { NotasVista } from './vista.js';
 import { NotasControlador } from './controlador.js';
 import { TermometroVista } from './termometro-vista.js';
-import { AlmacenLocal } from './almacen.js';
+import { AlmacenSesion } from './almacen.js';
 
 // 1. El Modelo, con el almacén que elijamos.
-const modelo = new NotasModelo(new AlmacenLocal('notas.v1'));
+const modelo = new NotasModelo(new AlmacenSesion('notas.v1'));
 
 // 2. La Vista: recibe el Modelo para poder LEERLO y suscribirse a sus cambios.
 const vista = new NotasVista(document.getElementById('app'), modelo);
@@ -19,4 +19,4 @@ new NotasControlador(modelo, vista);
 // Parte 5B: la segunda vista (el termómetro) lee el mismo Modelo y se redibuja sola.
 new TermometroVista(document.getElementById('termometro'), modelo);
 
-// Parte 5C: aquí cambiarás el almacén por otro.
+// Parte 5C: el almacén ahora es AlmacenSesion (antes AlmacenLocal): es la única línea que cambió de pieza.
