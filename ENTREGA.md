@@ -121,14 +121,14 @@ ARQUITECTURA
 
 ## 5. Tres cambios, tres lugares (Parte 5)
 
-**5A · Nombres únicos** (`git show --stat cf82297`)
+**5A · Nombres únicos** (`git show --stat 941c1af`)
 
 ```text
  src/modelo.js | 6 ++++++
  1 file changed, 6 insertions(+)
 ```
 
-**5B · Segunda vista, el termómetro** (`git show --stat f94285a`)
+**5B · Segunda vista, el termómetro** (`git show --stat 17f7a81`)
 
 ```text
  src/main.js             |  5 ++++-
@@ -136,7 +136,7 @@ ARQUITECTURA
  2 files changed, 51 insertions(+), 1 deletion(-)
 ```
 
-**5C · Otro almacén** (`git show --stat 4e57fc9`)
+**5C · Otro almacén** (`git show --stat aa4ba62`)
 
 ```text
  src/almacen.js | 21 +++++++++++++++++++++
