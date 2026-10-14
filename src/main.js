@@ -4,6 +4,7 @@
 import { NotasModelo } from './modelo.js';
 import { NotasVista } from './vista.js';
 import { NotasControlador } from './controlador.js';
+import { TermometroVista } from './termometro-vista.js';
 import { AlmacenLocal } from './almacen.js';
 
 // 1. El Modelo, con el almacén que elijamos.
@@ -15,5 +16,7 @@ const vista = new NotasVista(document.getElementById('app'), modelo);
 // 3. El Controlador: recibe las dos piezas y las conecta (eventos de la Vista → acciones del Modelo).
 new NotasControlador(modelo, vista);
 
-// Parte 5B: aquí montarás la segunda vista (el termómetro).
+// Parte 5B: la segunda vista (el termómetro) lee el mismo Modelo y se redibuja sola.
+new TermometroVista(document.getElementById('termometro'), modelo);
+
 // Parte 5C: aquí cambiarás el almacén por otro.
