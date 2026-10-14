@@ -1,7 +1,7 @@
 # Entrega · Laboratorio MVC · Notas del semestre
 
 **Equipo:** Trabajo individual  
-**Integrantes:** Santiago López Gómez  
+**Integrantes:** Luis Fernando Usuga Higuita  
 **Repositorio:** _(pega aquí el enlace público de tu repositorio de GitHub)_
 
 ---
